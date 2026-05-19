@@ -1,20 +1,7 @@
 # SKYBLUEAPI
 
-基于 FastAPI 的异步 API 脚手架`fast-boiler`项目骨架，内置用户认证与基础分层结构。
+基于 FastAPI 的异步 API 脚手架`fast-boiler`项目骨架。
 
-## 目录
-
-- [特性](#特性)
-- [技术栈](#技术栈)
-- [目录结构](#目录结构)
-- [前置要求](#前置要求)
-- [快速开始（Windows）](#快速开始windows)
-- [快速开始（macOSLinux）](#快速开始macoslinux)
-- [主要接口说明](#主要接口说明)
-- [数据库](#数据库)
-- [代码生成（fast-boiler）](#代码生成fast-boiler)
-- [开发约定](#开发约定)
-- [常见问题](#常见问题)
 
 ## 特性
 
@@ -35,7 +22,7 @@
 
 ```
 app/
-  auth/           认证相关（JWT Strategy / Routers / UserManager）
+  auth/           认证相关（Strategy / Routers / UserManager）
   controllers/    路由层（Controller）
   services/       业务逻辑层（Service）
   repositories/   数据访问层（Repository）
@@ -102,25 +89,23 @@ uvicorn app.main:app --reload
 
 ## 主要接口说明
 
-认证与用户相关路由在 [app/main.py](file:///d:/skyblue_file/GItHub/fastapi-study/SKYBLUEAPI/app/main.py) 中注册：
+认证、用户与业务路由在 [app/main.py](file:///d:/skyblue_file/GItHub/fastapi-study/SKYBLUEAPI/app/main.py) 中注册。当前主要接口如下：
 
-- 认证（JWT Cookie）
-  - `POST /auth/jwt/login`
-  - `POST /auth/jwt/logout`
-- 注册与密码重置
-  - `POST /auth/register`
-  - `POST /auth/forgot-password`
-  - `POST /auth/reset-password`
-- 用户自助与管理（fastapi-users 自动生成）
-  - `GET /users/me`
-  - `PATCH /users/me`
-  - `GET /users/{id}`（通常为管理员权限）
-- 用户列表（管理员分页查询）
-  - `GET /users`（分页 + 过滤，管理员权限）
+- 认证
+  - `PUT /auth/register`：用户注册，请使用 JSON body 提交 `account`、`password`、`mobile` 等参数。
+  - `POST /auth/login`：用户登录，成功后返回 token，并写入 Cookie。
+  - `POST /auth/logout`：退出登录，清除 Cookie。
+- 当前用户
+  - `GET /user/info`：获取当前登录用户信息，需要携带 token。
+- 用户列表
+  - `GET /users/list`：分页查询 `box_user` 用户列表，需要携带 token。
+- AI 模型列表
+  - `GET /model/list`：分页查询 `box_ai_api_model` 模型列表，只返回 `is_delete = 0` 的数据，需要携带 token。
 
 说明：
 
-- 本项目使用 Cookie 方式承载 JWT；本地调试建议直接通过 Swagger UI 进行登录与携带 Cookie 的接口调用。
+- 本项目使用 Cookie 方式承载 JWT；本地调试可以先调用 `/auth/login` 获取登录态，再请求需要登录的接口。
+- 分页接口支持 `page`、`size` 查询参数，例如：`GET /model/list?page=1&size=20`。
 
 ## 数据库
 
