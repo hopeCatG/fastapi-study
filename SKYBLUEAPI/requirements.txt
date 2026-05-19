@@ -1,0 +1,19 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+aiosqlite
+fastapi-pagination
+python-dotenv
+# Database driver
+asyncpg
+
+# Authentication
+# Core library for user management
+fastapi-users[sqlalchemy]
+
+# For securely hashing passwords
+passlib[bcrypt]
+
+# For creating and verifying JSON Web Tokens (JWT)
+python-jose[cryptography]
