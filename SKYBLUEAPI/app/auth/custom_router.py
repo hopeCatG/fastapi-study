@@ -27,7 +27,7 @@ class RegisterRequest(BaseModel):
     channel: int = 3
 
 
-@router.post("/register", summary="注册")
+@router.put("/register", summary="注册")
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
     account = payload.account.strip()
     mobile = payload.mobile.strip()
