@@ -1,6 +1,7 @@
 from typing import Generic, Type, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import select, update, delete
+from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from app.database import Base
 
@@ -10,6 +11,7 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 # --- ASYNC VERSION ---
 from sqlalchemy.ext.asyncio import AsyncSession
+
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
@@ -42,7 +44,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                         statement = statement.where(column != value)
                     # Add other operators like gt, lt, gte, lte, like, in
             except ValueError:
-                continue # Ignore malformed filters
+                continue  # Ignore malformed filters
 
         # Sorting logic
         if query.get("sort_by"):
@@ -53,9 +55,20 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 else:
                     statement = statement.order_by(sort_column.asc())
 
-        return await paginate(db, statement)
+        params = Params(page=query.get("page", 1), size=query.get("size", 50))
+        page_data = await paginate(db, statement, params=params)
 
-    async def update(self, db: AsyncSession, *, id: int, obj_in: UpdateSchemaType) -> ModelType | None:
+        return {
+            "lists": page_data.items,
+            "total": page_data.total,
+            "page": page_data.page,
+            "size": page_data.size,
+            "pages": page_data.pages,
+        }
+
+    async def update(
+        self, db: AsyncSession, *, id: int, obj_in: UpdateSchemaType
+    ) -> ModelType | None:
         statement = (
             update(self.model)
             .where(self.model.id == id)
@@ -67,12 +80,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return result.scalar_one_or_none()
 
     async def delete(self, db: AsyncSession, *, id: int) -> ModelType | None:
-        statement = (
-            delete(self.model)
-            .where(self.model.id == id)
-            .returning(self.model)
-        )
+        statement = delete(self.model).where(self.model.id == id).returning(self.model)
         result = await db.execute(statement)
         await db.commit()
         return result.scalar_one_or_none()
-

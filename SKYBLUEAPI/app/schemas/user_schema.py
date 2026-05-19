@@ -1,5 +1,6 @@
 from fastapi_users import schemas
 
+
 class UserRead(schemas.BaseUser[int]):
     """
     Schema for reading user information.
@@ -7,12 +8,14 @@ class UserRead(schemas.BaseUser[int]):
     """
     pass
 
+
 class UserCreate(schemas.BaseUserCreate):
     """
     Schema for creating a new user.
     Inherits fields from BaseUserCreate (email, password).
     """
     pass
+
 
 class UserUpdate(schemas.BaseUserUpdate):
     """

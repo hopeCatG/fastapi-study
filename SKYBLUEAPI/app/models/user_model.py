@@ -3,6 +3,7 @@ from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
+
 class User(SQLAlchemyBaseUserTable[int], Base):
     """
     The User model for authentication.

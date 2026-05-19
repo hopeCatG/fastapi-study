@@ -1,26 +1,27 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_pagination import add_pagination
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.database import Base, engine
 from app.controllers import user_controller
-from app.auth.routers import (
-    auth_router,
-    register_router,
-    reset_password_router,
-    users_router  # <-- NEW: Import the users_router
-)
-# V-- Auto-include new controllers here --V
+from app.controllers import box_user_controller
+from app.controllers import box_ai_api_model_controller
+from app.auth.custom_router import router as custom_auth_router
+# V-- 在这里自动引入新的控制器 --V
 
 
-# Lifespan manager to handle startup events
+# 生命周期管理器，用于处理应用启动事件
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This creates all tables defined in your models on startup.
-    # In a production app with Alembic, this would be removed.
+    # 启动时创建模型中定义的所有数据表。
+    # 生产环境如果使用 Alembic 管理迁移，可以移除这里。
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    # Code in this block would run on shutdown
+    # 这里可以放应用关闭时需要执行的代码
 
 
 app = FastAPI(
@@ -30,7 +31,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    message = exc.detail if isinstance(exc.detail, str) else "error"
+    return JSONResponse(status_code=200, content={"code": exc.status_code, "data": None, "message": message})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=200, content={"code": 422, "data": exc.errors(), "message": "参数校验失败"})
+
+
+# 跨域中间件
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,24 +52,22 @@ app.add_middleware(
 )
 
 
-# Include the main resource router (e.g., for users)
-# This now provides the admin-only, paginated GET /users endpoint
+# 注册业务资源路由
 app.include_router(user_controller.router)
+app.include_router(box_user_controller.router)
+app.include_router(box_ai_api_model_controller.router)
 
-# Include the authentication routers
-app.include_router(auth_router, prefix="/auth/jwt", tags=["auth"])
-app.include_router(register_router, prefix="/auth", tags=["auth"])
-app.include_router(reset_password_router, prefix="/auth", tags=["auth"])
-
-# 👇 NEW: Include the router for self-service and admin user management
-app.include_router(users_router, prefix="/users", tags=["users"])
+# 注册认证相关路由
+app.include_router(custom_auth_router, prefix="/auth", tags=["auth"])
 
 
-# V-- Auto-include new routers here --V
+# V-- 在这里自动注册新的路由 --V
+
+add_pagination(app)
 
 
 @app.get("/", tags=["Root"])
 async def read_root():
-    return {"message": "Welcome to the API!"}
+    return {"code": 200, "data": {"message": "Welcome to the API!"}, "message": "success"}
 
 

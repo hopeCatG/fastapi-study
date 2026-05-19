@@ -1,16 +1,23 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
+import os
+from dotenv import load_dotenv
 
-# UPDATED: Use aiosqlite for async SQLite connection
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./app.db"
+load_dotenv()
 
-# UPDATED: Switched to async engine
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./app.db")
 
-# UPDATED: Switched to async session factory
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL,
+    echo=True,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+)
+
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
+
 
 # UPDATED: Async dependency to get a DB session
 async def get_db() -> AsyncSession:
