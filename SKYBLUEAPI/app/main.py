@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -9,13 +10,14 @@ from fastapi_pagination import add_pagination
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.auth.custom_router import router as custom_auth_router
+from app.controllers import aigc_controller
 from app.controllers import box_ai_api_model_controller
 from app.controllers import box_user_controller
 from app.controllers import user_controller
 from app.database import Base, engine
+from app.utils.redis import close_arq_pool, create_arq_pool
 
 # V-- 在这里自动引入新的控制器 --V
-
 
 # 生命周期管理器，用于处理应用启动事件
 @asynccontextmanager
@@ -24,9 +26,9 @@ async def lifespan(app: FastAPI):
     # 生产环境如果使用 Alembic 管理迁移，可以移除这里。
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    app.state.arq_pool_task = asyncio.create_task(create_arq_pool())
     yield
-    # 这里可以放应用关闭时需要执行的代码
-
+    await close_arq_pool()
 
 app = FastAPI(
     title="SKYBLUEAPI",
@@ -87,6 +89,7 @@ app.add_middleware(
 app.include_router(user_controller.router)
 app.include_router(box_user_controller.router)
 app.include_router(box_ai_api_model_controller.router)
+app.include_router(aigc_controller.router)
 
 # 注册认证相关路由
 app.include_router(custom_auth_router, prefix="/auth", tags=["auth"])

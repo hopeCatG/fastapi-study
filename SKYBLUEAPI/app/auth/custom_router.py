@@ -22,7 +22,9 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=1, max_length=32)
     mobile: str = Field(min_length=1, max_length=32)
     nickname: str | None = Field(default=None, max_length=32)
-    avatar: str | None = Field(default="resource/image/adminapi/default/default_avatar.png", max_length=200)
+    avatar: str | None = Field(
+        default="resource/image/adminapi/default/default_avatar.png", max_length=200
+    )
     sex: int = 1
     channel: int = 3
 
@@ -33,13 +35,21 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     mobile = payload.mobile.strip()
     nickname = (payload.nickname or account).strip()
 
-    exists_statement = select(BoxUser).where((BoxUser.account == account) | (BoxUser.mobile == mobile))
+    exists_statement = select(BoxUser).where(
+        (BoxUser.account == account) | (BoxUser.mobile == mobile)
+    )
     exists_result = await db.execute(exists_statement)
     exists_user = exists_result.scalar_one_or_none()
     if exists_user:
         if exists_user.account == account:
-            return JSONResponse(status_code=200, content={"code": 400, "data": None, "message": "账号已存在"})
-        return JSONResponse(status_code=200, content={"code": 400, "data": None, "message": "手机号已存在"})
+            return JSONResponse(
+                status_code=200,
+                content={"code": 400, "data": None, "message": "账号已存在"},
+            )
+        return JSONResponse(
+            status_code=200,
+            content={"code": 400, "data": None, "message": "手机号已存在"},
+        )
 
     max_sn = await db.scalar(select(func.max(BoxUser.sn)))
     now = int(time.time())
@@ -76,21 +86,34 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         status_code=200,
         content={
             "code": 200,
-            "data": {"id": user.id, "account": user.account, "mobile": user.mobile, "nickname": user.nickname},
+            "data": {
+                "id": user.id,
+                "account": user.account,
+                "mobile": user.mobile,
+                "nickname": user.nickname,
+            },
             "message": "注册成功",
         },
     )
 
 
 @router.post("/login", summary="登录")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+):
     statement = select(BoxUser).where(BoxUser.account == form_data.username)
     result = await db.execute(statement)
     user = result.scalar_one_or_none()
     if user is None:
-        return JSONResponse(status_code=200, content={"code": 400, "data": None, "message": "账号不存在"})
+        return JSONResponse(
+            status_code=200,
+            content={"code": 400, "data": None, "message": "账号不存在"},
+        )
     if not user.is_active:
-        return JSONResponse(status_code=200, content={"code": 400, "data": None, "message": "账号已禁用"})
+        return JSONResponse(
+            status_code=200,
+            content={"code": 400, "data": None, "message": "账号已禁用"},
+        )
 
     # calculated = hashlib.md5(form_data.password.encode("utf-8")).hexdigest()
     # if calculated.lower() != (user.password or "").lower():
@@ -102,7 +125,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         token = await token
     response = JSONResponse(
         status_code=200,
-        content={"code": 200, "data": {"token": token, "token_type": "cookie", "user_id": user.id, "account": user.account}, "message": "登录成功"},
+        content={
+            "code": 200,
+            "data": {
+                "token": token,
+                "token_type": "cookie",
+                "user_id": user.id,
+                "account": user.account,
+            },
+            "message": "登录成功",
+        },
     )
     response.set_cookie(
         cookie_transport.cookie_name,
@@ -119,7 +151,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 
 @router.post("/logout", summary="退出登录")
 async def logout():
-    response = JSONResponse(status_code=200, content={"code": 200, "data": None, "message": "退出成功"})
+    response = JSONResponse(
+        status_code=200, content={"code": 200, "data": None, "message": "退出成功"}
+    )
     response.set_cookie(
         cookie_transport.cookie_name,
         "",

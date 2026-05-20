@@ -18,3 +18,6 @@ passlib[bcrypt]
 
 # For creating and verifying JSON Web Tokens (JWT)
 python-jose[cryptography]
+
+# Async task queue
+arq
